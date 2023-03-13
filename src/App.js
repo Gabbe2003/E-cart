@@ -1,33 +1,46 @@
 import './App.css'; 
-import React,{useState, useEffect} from 'react';
+import React,{useState, useEffect, useRef} from 'react';
 
-import ClearNight from './weather-condition-images/night/Clear.jpg';
-import CloudyNight from './weather-condition-images/night/Cloudy.jpg';
-import RainyNight from './weather-condition-images/night/Rainy.jpg';
-import SnowyNight from './weather-condition-images/night/Snowy.jpg';
-
-import ClearDay from './weather-condition-images/day/Clear.jpg';
-import CloudDay from './weather-condition-images/day/Cloudy.jpg';
-import RainyDay from './weather-condition-images/day/Rainy.jpg';
-import SnowyDay from './weather-condition-images/day/Snowy.jpg';
+const weatherImages = {
+  night: {
+    clear: () => import(`./weather-condition-images/night/Clear.jpg`),
+    cloudy: () => import(`./weather-condition-images/night/Cloudy.jpg`),
+    rainy: () => import(`./weather-condition-images/night/Rainy.jpg`),
+    snowy: () => import(`./weather-condition-images/night/Snowy.jpg`),
+  },
+  day: {
+    clear: () => import(`./weather-condition-images/day/Clear.jpg`),
+    cloudy: () => import(`./weather-condition-images/day/Cloudy.jpg`),
+    rainy: () => import(`./weather-condition-images/day/Rainy.jpg`),
+    snowy: () => import(`./weather-condition-images/day/Snowy.jpg`),
+  }
+  };
+  
 
 const API_KEY = 'b8291aea7ff94825a8c201541230303'; 
 
 let useEffectCounter = 0; 
 
 function App() {
-const [inputValue, setInputValue] = useState(''); 
+const [forcastDisplayer, setForcastDisplayer] = useState(null);
 const [weatherData, setWeatherData] = useState(null);
+const [inputValue, setInputValue] = useState(''); 
+const [result, setResult] = useState(null);
+
+
+const inputValueRef = useRef(null); 
+const searchBarRef = useRef(null);
+const containerRef = useRef(null);
+
 
 function RenderWeather() {
 fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${inputValue}&aqi=yes`)
   .then(res => res.json())
   .then(data =>{
     setWeatherData(data);
-    document.querySelector('.input').value = ''
+    setInputValue('')
   })
   .catch(err => console.log(err.name))
-    
 }
 
 function handleSub (e) {
@@ -35,91 +48,79 @@ function handleSub (e) {
   RenderWeather(); 
 }
 
+
+
+
 useEffect(() => {
-  document.querySelector('.result').innerHTML = null
-  if (weatherData) {
-    const {
-      location: { name, localtime }, 
-      current: {
-        temp_c,
-        condition: { text, code }
-      }
-    } = weatherData;
-
-    checkWeather(weatherData.current.is_day, code);
-
-    const wrapper = document.createElement('div');
-    const temp = document.createElement('p');
-    const local = document.createElement('p');
-
-    temp.append(temp_c + '°C    ' + name);
-    local.append(localtime + '  ' + text);
-
-    wrapper.append(temp);
-    wrapper.append(local); 
-
-    document.querySelector('.result').appendChild(wrapper);
-
-    getForcast(name); 
+setResult('')
+if (weatherData) {
+const {
+  location: { name, localtime }, 
+  current: {
+    temp_c,
+    condition: { text, code }
   }
+} = weatherData;
+
+checkWeather(weatherData.current.is_day, code);
+
+const wrapper = <div>
+  <p>{temp_c + '°C    ' + name}</p>
+  <p>{localtime + '  ' + text}</p>
+</div>
+
+
+setResult(wrapper);
+  
+getForcast(name); 
+
+}
 }, [weatherData])
 
 
-function toggleFocus() {
-  const searchBar = document.querySelector('.search-bar');
-  const input = document.querySelector('.input');
 
-  input.addEventListener('focus', () => {
-    searchBar.classList.add('focused');
-    if (input.value !== '') {
-      searchBar.classList.add('focused');
-    } 
-  });
+const toggleFocus = () => {
+ searchBarRef.current.classList.add('focused');
+}
 
-  input.addEventListener('blur', () => {
-    if (input.value === '') {
-      searchBar.classList.remove('focused');
-    }
-  });
+const toggleBlur = () => {
+  searchBarRef.current.classList.remove('focused');
 
 }
 
+
+
 useEffect(() => {
-  toggleFocus(); 
+  toggleBlur(); 
 },[])
 
 
 
 
 function getForcast(name) {
-document.querySelector('#forcastDisplayer').innerHTML = ''
+setForcastDisplayer(''); 
 fetch(`http://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${name}&days=3&aqi=no&alerts=no`)
 .then(resp => resp.json())
 .then(data => {
     const forecast = data.forecast.forecastday[0];
     const localtime = data.location.localtime.split(' ')[1]; // extract time portion only
+    const items = [];
 
     for (let i = 1; i <= 12; i++) {
       const temp_c = forecast.hour[i].temp_c;
       const icon = forecast.hour[i].condition.icon;
+    
+      const wrapper = (
+        <div className="forecast-item">
+          <img src={icon} />
+          <p>{formatTime(localtime, i)}</p>
+          <p>{temp_c}</p>
+        </div>
+      );
 
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('forecast-item');
+      items.push(wrapper );
+    setForcastDisplayer(items);
 
-      const temp = document.createElement('p');
-      temp.innerText = temp_c;
-
-      const time = document.createElement('p');
-      time.innerText = formatTime(localtime, i);
-
-      const iconElement = document.createElement('img');
-      iconElement.src = icon;
-
-      wrapper.append(iconElement);
-      wrapper.append(time);
-      wrapper.append(temp);
-      document.querySelector('#forcastDisplayer').appendChild(wrapper);
-      console.log(wrapper);
     }
   });
 }
@@ -135,167 +136,105 @@ function formatTime(localtime, increment) {
 }
 
 
-// useEffect(() =>{
-//   useEffectCounter++
-//   if(useEffectCounter == 1){
-//     return 
-//   }
-//   navigator.geolocation.getCurrentPosition(position => {
-//     fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=` +`${position.coords.latitude} + ${position.coords.longitude}`)
-//     .then((res) => res.json())   
-//     .then(data =>{
-//       setWeatherData(data);
-//     })
-//     .catch(err => console.log(err.name))
-//   })
-// }, [])
+useEffect(() =>{
+  useEffectCounter++
+  if(useEffectCounter == 1){
+    return 
+  }
+  navigator.geolocation.getCurrentPosition(position => {
+    fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=` +`${position.coords.latitude} + ${position.coords.longitude}`)
+    .then((res) => res.json())   
+    .then(data =>{
+      setWeatherData(data);
+    })
+    .catch(err => console.log(err.name))
+  })
+}, [])
+
+
+
+async function checkWeather(is_day, code) {
+  switch (code) {
+    case 1000:
+      containerRef.current.style.backgroundImage = `url(${is_day ? (await weatherImages.day.clear()).default : (await weatherImages.night.clear()).default})`;
+      break;
+
+    case 1003:
+    case 1006:
+    case 1009:
+    case 1030:
+    case 1069:
+    case 1087:
+    case 1135:
+    case 1273:
+    case 1276:
+    case 1279:
+    case 1282:
+      containerRef.current.style.backgroundImage = `url(${is_day ? (await weatherImages.day.cloudy()).default : (await weatherImages.night.cloudy()).default})`;
+      break;
+
+    case 1063:
+    case 1069:
+    case 1072:
+    case 1150:
+    case 1180:
+    case 1183:
+    case 1186:
+    case 1189:
+    case 1192:
+    case 1204:
+    case 1207:
+    case 1240:
+    case 1243:
+    case 1246:
+    case 1249:
+    case 1252:
+      containerRef.current.style.backgroundImage = `url(${is_day ? (await weatherImages.day.rainy()).default : (await weatherImages.night.rainy()).default})`;
+      break;
+
+    default:
+      containerRef.current.style.backgroundImage = `url(${is_day ? (await weatherImages.day.snowy()).default : (await weatherImages.night.snowy()).default})`;
+      break;
+  }
+
+  if (is_day) {
+    inputValueRef.current.classList.remove('whiteColor', 'blackBackgroundColor', 'whiteBorderColor');
+    containerRef.current.classList.remove('whiteColor');
+    searchBarRef.current.classList.remove('white');
+  } else {
+    inputValueRef.current.classList.add('whiteColor', 'blackBackgroundColor', 'whiteBorderColor');
+    containerRef.current.classList.add('whiteColor');
+    searchBarRef.current.classList.add('white');
+  }
+}
+  
+
 
 return (
-  <>
-  <div className="container mt-5 w-75 p-2">
-    <div className="search-bar">
-      <form onSubmit={handleSub} noValidate='off'>
-        <span>
-          Se  
-          <input type="text" className="input" required onChange={(e) => setInputValue(e.target.value)} onClick={toggleFocus}/>
-          rch...
-        </span>
-      </form>
-    </div>
-    <div className="result"></div>
+<>
+<div className="container mt-5 w-75 p-2" ref={containerRef}>
+  <div className="search-bar" ref={searchBarRef}>
+    <form onSubmit={handleSub} noValidate='off'>
+      <span>
+        Se  
+        <input type="text" className="input" ref={inputValueRef} required value={inputValue} onChange={(e) => setInputValue(e.target.value)} onFocus={toggleFocus} onBlur={toggleBlur}/>
+        rch...
+      </span>
+    </form>
   </div>
+  <div className="result">{result}</div>
+</div>
 
-<div className='forecast '>
-    <div id='forcastDisplayer'></div>
+<div className='forecast'>
+  <div id='forcastDisplayer'>
+    {forcastDisplayer}
+  </div>
 </div>
 
 </>
 );
 
-
 }
-
-function checkWeather(is_day, code){
-  const container = document.querySelector('.container'); 
-  const input = document.querySelector('.input');
-  const searchBar = document.querySelector('.search-bar');
-
-  if(!is_day){
-    input.style.color = 'white';
-    container.style.color = 'white';
-    searchBar.classList.add('white'); 
-    input.style.backgroundColor = 'black';
-    input.style.border = '2px solid white';
-
-    // Clear weather
-    if(code == 1000){
-      container.style.backgroundImage = `url(${ClearNight})`;
-    }
-
-  // cloudy
-  else if(
-      code == 1003 || 
-      code == 1006 ||
-      code == 1009 ||
-      code == 1030 ||
-      code == 1069 ||
-      code == 1087 ||
-      code == 1135 ||
-      code == 1273 ||
-      code == 1276 ||
-      code == 1279 ||
-      code == 1282
-  ){
-    container.style.backgroundImage = `url(${CloudyNight})`;
-  }
-
-  // //Rain
-  else if(
-      code == 1063 ||
-      code == 1069 ||
-      code == 1072 ||
-      code == 1150 ||
-      code == 1180 ||
-      code == 1183 ||
-      code == 1186 ||
-      code == 1189 ||
-      code == 1192 ||
-      code == 1204 ||
-      code == 1207 ||
-      code == 1240 ||
-      code == 1243 ||
-      code == 1246 ||
-      code == 1249 ||
-      code == 1252 
-  ){
-    container.style.backgroundImage = `url(${RainyNight})`;
-  }
-  else{
-    container.style.backgroundImage = `url(${SnowyNight})`;
-  }
-}
-
-  if(is_day){
-  input.style.color = 'black';
-  container.style.color = 'black'
-  searchBar.classList.remove('white'); 
-  input.style.backgroundColor = 'white';
-  input.style.border = '2px solid black';
-
-
-  // Clear weather
-  if(code == 1000){
-    container.style.backgroundImage = `url(${ClearDay})`;
-    container.style.color = 'white'
-  }
-
-  // cloudy
-  else if(
-      code == 1003 || 
-      code == 1006 ||
-      code == 1009 ||
-      code == 1030 ||
-      code == 1069 ||
-      code == 1087 ||
-      code == 1135 ||
-      code == 1273 ||
-      code == 1276 ||
-      code == 1279 ||
-      code == 1282
-  ){
-    container.style.backgroundImage = `url(${CloudDay})`;
-  }
-
-  // //Rain
-  else if(
-      code == 1063 ||
-      code == 1069 ||
-      code == 1072 ||
-      code == 1150 ||
-      code == 1180 ||
-      code == 1183 ||
-      code == 1186 ||
-      code == 1189 ||
-      code == 1192 ||
-      code == 1204 ||
-      code == 1207 ||
-      code == 1240 ||
-      code == 1243 ||
-      code == 1246 ||
-      code == 1249 ||
-      code == 1252 
-  ){
-    container.style.backgroundImage = `url(${RainyDay})`;
-
-  }
-  else{
-    container.style.backgroundImage = `url(${SnowyDay})`;
-
-  }
-  }
-
-}
-
 
 
 
