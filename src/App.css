@@ -60,6 +60,20 @@ body{
 }
 
 
+.whiteColor{
+    color: white;
+}
+
+.blackBackgroundColor{
+    background-color: black;
+}
+
+.whiteBorderColor{
+    border: 2px solid white;
+}
+
+
+
 .input:focus, input:valid{
     width: 200px;
     border-radius: 20px;
@@ -96,6 +110,7 @@ body{
 .search-bar.white::after {
     background-color: white;
 }
+
 
 
 .forecast{
