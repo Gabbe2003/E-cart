@@ -35,20 +35,25 @@ const containerRef = useRef(null);
 
 function RenderWeather() {
 fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${inputValue}&aqi=yes`)
+.catch(err => console.log(err.name))
+
   .then(res => res.json())
   .then(data =>{
+    if (data.error && data.error.code === 1006) {
+      console.log('Location not found');
+      return;
+    }
     setWeatherData(data);
     setInputValue('')
   })
-  .catch(err => console.log(err.name))
+
+  
 }
 
 function handleSub (e) {
   e.preventDefault();
   RenderWeather(); 
 }
-
-
 
 
 useEffect(() => {
@@ -85,9 +90,11 @@ const toggleFocus = () => {
 
 const toggleBlur = () => {
   searchBarRef.current.classList.remove('focused');
+  if(inputValue){
+    searchBarRef.current.classList.add('focused');
+  }
 
 }
-
 
 
 useEffect(() => {
