@@ -1,5 +1,5 @@
+import React, { useState, useEffect, useRef } from 'react'
 import './App.css'; 
-import React,{useState, useEffect, useRef} from 'react';
 
 const weatherImages = {
   night: {
@@ -17,11 +17,12 @@ const weatherImages = {
   };
   
 
-const API_KEY = 'b8291aea7ff94825a8c201541230303'; 
 
 let useEffectCounter = 0; 
 
-function App() {
+const API_KEY = "b8291aea7ff94825a8c201541230303"; 
+
+function Weather() {
 const [forcastDisplayer, setForcastDisplayer] = useState(null);
 const [weatherData, setWeatherData] = useState(null);
 const [inputValue, setInputValue] = useState(''); 
@@ -85,7 +86,7 @@ getForcast(name);
 
 
 const toggleFocus = () => {
- searchBarRef.current.classList.add('focused');
+searchBarRef.current.classList.add('focused');
 }
 
 const toggleBlur = () => {
@@ -101,34 +102,45 @@ useEffect(() => {
   toggleBlur(); 
 },[])
 
-
-
-
 function getForcast(name) {
-setForcastDisplayer(''); 
-fetch(`http://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${name}&days=3&aqi=no&alerts=no`)
-.then(resp => resp.json())
-.then(data => {
+  setForcastDisplayer(''); 
+  fetch(`http://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${name}&days=3&aqi=no&alerts=no`)
+  .then(resp => resp.json())
+  .then(data => {
     const forecast = data.forecast.forecastday[0];
     const localtime = data.location.localtime.split(' ')[1]; // extract time portion only
     const items = [];
+    const icons = [];
+    const temps = [];
 
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 0; i <= 12; i++) {
       const temp_c = forecast.hour[i].temp_c;
       const icon = forecast.hour[i].condition.icon;
-    
+
+      icons.push(icon);
+      temps.push(temp_c);
+    }
+
+    icons.reverse(); // Reverse the order of icons
+    temps.reverse(); // Reverse the order of temperatures
+
+    for (let i = 0; i <= 12; i++) {
+      const temp_c = temps[i]; // Get the reversed temperature
+      const icon = icons[i]; // Get the reversed icon
+
       const wrapper = (
         <div className="forecast-item">
-          <img src={icon} />
+          <img src={icon}  alt='Icons'/>
           <p>{formatTime(localtime, i)}</p>
-          <p>{temp_c}</p>
+          <p>{temp_c}°C</p>
         </div>
       );
 
-      items.push(wrapper );
+      items.push(wrapper);
+    }
+    
     setForcastDisplayer(items);
 
-    }
   });
 }
 
@@ -143,9 +155,10 @@ function formatTime(localtime, increment) {
 }
 
 
+
 useEffect(() =>{
   useEffectCounter++
-  if(useEffectCounter == 1){
+  if(useEffectCounter === 1){
     return 
   }
   navigator.geolocation.getCurrentPosition(position => {
@@ -181,7 +194,6 @@ async function checkWeather(is_day, code) {
       break;
 
     case 1063:
-    case 1069:
     case 1072:
     case 1150:
     case 1180:
@@ -224,7 +236,11 @@ return (
     <form onSubmit={handleSub} noValidate='off'>
       <span>
         Se  
-        <input type="text" className="input" ref={inputValueRef} required value={inputValue} onChange={(e) => setInputValue(e.target.value)} onFocus={toggleFocus} onBlur={toggleBlur}/>
+        <input type="text" className="input"
+        ref={inputValueRef} required value={inputValue} 
+        onChange={(e) => setInputValue(e.target.value)} 
+        onFocus={toggleFocus} 
+        onBlur={toggleBlur}/>
         rch...
       </span>
     </form>
@@ -232,8 +248,8 @@ return (
   <div className="result">{result}</div>
 </div>
 
-<div className='forecast'>
-  <div id='forcastDisplayer'>
+<div className='forecast'key='forecast' >
+  <div id='forcastDisplayer' key='forcastDisplayer'>
     {forcastDisplayer}
   </div>
 </div>
@@ -245,6 +261,6 @@ return (
 
 
 
-export default App; 
+export default Weather; 
 
 
